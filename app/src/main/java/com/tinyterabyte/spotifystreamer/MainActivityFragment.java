@@ -1,16 +1,20 @@
 package com.tinyterabyte.spotifystreamer;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -24,9 +28,6 @@ import kaaes.spotify.webapi.android.SpotifyService;
 import kaaes.spotify.webapi.android.models.Artist;
 import kaaes.spotify.webapi.android.models.ArtistsPager;
 
-/**
- * A placeholder fragment containing a simple view.
- */
 public class MainActivityFragment extends Fragment {
 
     public MainActivityFragment() {
@@ -37,53 +38,41 @@ public class MainActivityFragment extends Fragment {
                              Bundle savedInstanceState) {
         final View rootView = inflater.inflate(R.layout.fragment_main, container, false);
 
-        AsyncTask task = new AsyncTask() {
-            @Override
-            protected Object doInBackground(Object[] params) {
-
-                SpotifyApi api = new SpotifyApi();
-                SpotifyService spotify = api.getService();
-
-                try {
-                    ArtistsPager results = spotify.searchArtists(params[0].toString());
-                    List<Artist> list = results.artists.items;
-                    return list;
-                } catch (Exception e) {
-                    Log.v("searchArtists", e.toString());
-                }
-                return null;
-            }
-
-            @Override
-            protected void onPostExecute(final Object o) {
-                getActivity().runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-
-                        final List<Artist> list = (List<Artist>) o;
-
-                        if (list == null) return;
-
-                        ArtistsAdapter adapter = new ArtistsAdapter(getActivity(), list);
-
-                        ListView listView = (ListView) rootView.findViewById(R.id.listView);
-                        listView.setAdapter(adapter);
-                    }
-                });
-            }
-        };
-
-        task.execute("Beyonce");
-
         ListView listView = (ListView) rootView.findViewById(R.id.listView);
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                Artist artist = (Artist) parent.getAdapter().getItem(position);
                 Intent intent = new Intent(getActivity(), TopTracksActivity.class);
+                intent.putExtra("artistID", artist.id);
                 startActivity(intent);
-                Log.v("OIC", "started");
             }
         });
+
+        EditText editText = (EditText) rootView.findViewById(R.id.editText);
+        editText.setText("");
+        editText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (s == null) { return; }
+                if (s.toString().equals("")) {
+                    // Could empty the ListView here.
+                    // But why bother?
+                    // Works fine regardless.
+                } else {
+                    // Search for s.toString()
+                    final AsyncTask task = new FetchArtistsTask(getActivity(), rootView);
+                    task.execute(s.toString());
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+
 
         return rootView;
     }
@@ -115,4 +104,49 @@ class ArtistsAdapter extends ArrayAdapter<Artist> {
 
         return convertView;
     }
+}
+
+class FetchArtistsTask extends AsyncTask {
+    private Context mContext;
+    private View mView;
+
+    public FetchArtistsTask(Context context, View view) {
+        mContext = context;
+        mView = view;
+    }
+
+    @Override
+    protected Object doInBackground(Object[] params) {
+
+        SpotifyApi api = new SpotifyApi();
+        SpotifyService spotify = api.getService();
+
+        try {
+            ArtistsPager results = spotify.searchArtists(params[0].toString());
+            List<Artist> list = results.artists.items;
+            return list;
+        } catch (Exception e) {
+            Log.v("searchArtists", e.toString());
+        }
+        return null;
+    }
+
+    @Override
+    protected void onPostExecute(final Object o) {
+        ((Activity) mContext).runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+
+                final List<Artist> list = (List<Artist>) o;
+
+                if (list == null) return;
+
+                ArtistsAdapter adapter = new ArtistsAdapter(mContext, list);
+
+                ListView listView = (ListView) mView.findViewById(R.id.listView);
+                listView.setAdapter(adapter);
+            }
+        });
+    }
+
 }
