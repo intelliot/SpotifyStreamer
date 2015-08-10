@@ -34,11 +34,26 @@ public class TopTracksFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
+        View rootView = inflater.inflate(R.layout.fragment_toptracks, container, false);
+        final AsyncTask task = new FetchTopTracksTask(getActivity(), rootView);
+        task.execute();
+        return rootView;
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+    }
+
+//    @Override
+//    public void onCreate(Bundle savedInstanceState) {
+//        super.onCreate(savedInstanceState);
+//    }
+}
+
+
 
 //        getFragmentManager().putFragment(savedInstanceState, "TopTracksFragment", this);
-
-        View rootView = inflater.inflate(R.layout.fragment_toptracks, container, false);
-
 
 
 //        Intent intent = getIntent();
@@ -66,12 +81,7 @@ public class TopTracksFragment extends Fragment {
 //            }
 //        });
 
-        final AsyncTask task = new FetchTopTracksTask(getActivity(), rootView);
-        task.execute();
 
-        return rootView;
-    }
-}
 
 class TracksAdapter extends ArrayAdapter<Track> {
     public TracksAdapter(Context context, List<Track> tracks) {

@@ -21,12 +21,14 @@ import android.widget.TextView;
 
 import com.squareup.picasso.Picasso;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import kaaes.spotify.webapi.android.SpotifyApi;
 import kaaes.spotify.webapi.android.SpotifyService;
 import kaaes.spotify.webapi.android.models.Artist;
 import kaaes.spotify.webapi.android.models.ArtistsPager;
+import kaaes.spotify.webapi.android.models.Image;
 
 public class MainActivityFragment extends Fragment {
 
@@ -42,9 +44,9 @@ public class MainActivityFragment extends Fragment {
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Artist artist = (Artist) parent.getAdapter().getItem(position);
+                ArtistParcelable artist = (ArtistParcelable) parent.getAdapter().getItem(position);
                 Intent intent = new Intent(getActivity(), TopTracksActivity.class);
-                intent.putExtra("artistID", artist.id);
+                intent.putExtra("artistID", artist.getId());
                 startActivity(intent);
             }
         });
@@ -78,30 +80,31 @@ public class MainActivityFragment extends Fragment {
     }
 }
 
-class ArtistsAdapter extends ArrayAdapter<Artist> {
-    public ArtistsAdapter(Context context, List<Artist> artists) {
+class ArtistsAdapter extends ArrayAdapter<ArtistParcelable> {
+    public ArtistsAdapter(Context context, List<ArtistParcelable> artists) {
         super(context, 0, artists);
     }
 
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
-        Artist artist = getItem(position);
+        ArtistParcelable artist = getItem(position);
         if (convertView == null) {
             convertView = LayoutInflater.from(getContext()).inflate(R.layout.list_item_artist, parent, false);
         }
-
         TextView artistTextView = (TextView) convertView.findViewById(R.id.list_item_artist_textview);
         ImageView artistImageView = (ImageView) convertView.findViewById(R.id.imageView);
-
-        artistTextView.setText(artist.name);
+        artistTextView.setText(artist.getName());
         try {
-            if (artist.images.size() > 0) {
-                Picasso.with(getContext()).load(artist.images.get(0).url).into(artistImageView);
+//            if (artist.images.size() > 0) {
+//                int positionOfSmallestImage = artist.images.size() - 1;
+//                Picasso.with(getContext()).load(artist.images.get(positionOfSmallestImage).url).into(artistImageView);
+//            }
+            if (artist.getImageUrl() != null) {
+                Picasso.with(getContext()).load(artist.getImageUrl()).into(artistImageView);
             }
         } catch (Exception e) {
             Log.e("getView", e.toString());
         }
-
         return convertView;
     }
 }
@@ -124,7 +127,24 @@ class FetchArtistsTask extends AsyncTask {
         try {
             ArtistsPager results = spotify.searchArtists(params[0].toString());
             List<Artist> list = results.artists.items;
-            return list;
+            ArrayList<ArtistParcelable> artistParcelableArrayList = new ArrayList<ArtistParcelable>();
+            for (Artist artist: list) {
+                String name = artist.name;
+                String id = artist.id;
+                List<Image> images = artist.images;
+                String thumbnailUrl = null;
+                for (int i = 0; i < images.size(); i++) {
+                    Image image = images.get(i);
+                    // Use image between 200 and 300 pixels wide as thumbnail
+                    if (image.width >= 200 && image.width <= 300) {
+                        thumbnailUrl = image.url;
+                        break;
+                    }
+                }
+                String imageUrl = thumbnailUrl;
+                artistParcelableArrayList.add(new ArtistParcelable(name, imageUrl, id));
+            }
+            return artistParcelableArrayList;
         } catch (Exception e) {
             Log.v("searchArtists", e.toString());
         }
@@ -133,20 +153,30 @@ class FetchArtistsTask extends AsyncTask {
 
     @Override
     protected void onPostExecute(final Object o) {
+        super.onPostExecute(o);
+
         ((Activity) mContext).runOnUiThread(new Runnable() {
             @Override
             public void run() {
-
-                final List<Artist> list = (List<Artist>) o;
-
-                if (list == null) return;
-
-                ArtistsAdapter adapter = new ArtistsAdapter(mContext, list);
-
+                List<ArtistParcelable> artists = (List<ArtistParcelable>) o;
+                if (artists == null) return;
+                ArtistsAdapter adapter = new ArtistsAdapter(mContext, artists);
                 ListView listView = (ListView) mView.findViewById(R.id.listView);
                 listView.setAdapter(adapter);
             }
         });
     }
 
+//    @Override
+//    protected void onPostExecute(final ArrayList<ArtistParcelable> artists) {
+//        ((Activity) mContext).runOnUiThread(new Runnable() {
+//            @Override
+//            public void run() {
+//                if (artists == null) return;
+//                ArtistsAdapter adapter = new ArtistsAdapter(mContext, artists);
+//                ListView listView = (ListView) mView.findViewById(R.id.listView);
+//                listView.setAdapter(adapter);
+//            }
+//        });
+//    }
 }

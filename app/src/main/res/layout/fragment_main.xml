@@ -14,7 +14,7 @@
         android:layout_alignParentEnd="true"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
-        android:text="Search for artist…" />
+        android:text="@string/search_for_artist" />
 
     <ListView
         android:layout_width="wrap_content"
