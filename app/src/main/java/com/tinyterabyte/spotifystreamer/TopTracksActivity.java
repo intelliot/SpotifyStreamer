@@ -5,15 +5,21 @@ import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuItem;
 
+import java.util.ArrayList;
+
 public class TopTracksActivity extends AppCompatActivity {
+
+    public ArrayList<TrackParcelable> mTrackParcelableArrayList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_toptracks);
-        //getActionBar().setDisplayHomeAsUpEnabled(true);
-    }
+        // Get tracks from bundle. Be sure to do this before loading the fragment, which uses this list.
+        Bundle bundle = this.getIntent().getExtras();
+        mTrackParcelableArrayList = bundle.getParcelableArrayList("trackList");
 
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_toptracks); // Load fragment view
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {

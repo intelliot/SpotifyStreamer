@@ -13,9 +13,11 @@ import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.squareup.picasso.Picasso;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -26,17 +28,23 @@ import kaaes.spotify.webapi.android.models.Tracks;
 
 public class TopTracksFragment extends Fragment {
 
-    String mArtistID;
-
-    public TopTracksFragment() {
-    }
-
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_toptracks, container, false);
-        final AsyncTask task = new FetchTopTracksTask(getActivity(), rootView);
-        task.execute();
+
+        TopTracksActivity activity = (TopTracksActivity) getActivity();
+
+        if (activity.mTrackParcelableArrayList != null && activity.mTrackParcelableArrayList.size() > 0) {
+            // Display the tracks.
+            TracksAdapter adapter = new TracksAdapter(activity, activity.mTrackParcelableArrayList);
+            ListView listView = (ListView) rootView.findViewById(R.id.listView);
+            listView.setAdapter(adapter);
+        } else {
+            // This shouldn't happen because we checked for this earlier.
+            Toast.makeText(activity, "No tracks available", Toast.LENGTH_LONG).show();
+        }
+
         return rootView;
     }
 
@@ -83,14 +91,14 @@ public class TopTracksFragment extends Fragment {
 
 
 
-class TracksAdapter extends ArrayAdapter<Track> {
-    public TracksAdapter(Context context, List<Track> tracks) {
+class TracksAdapter extends ArrayAdapter<TrackParcelable> {
+    public TracksAdapter(Context context, ArrayList<TrackParcelable> tracks) {
         super(context, 0, tracks);
     }
 
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
-        Track track = getItem(position);
+        TrackParcelable track = getItem(position);
         if (convertView == null) {
             convertView = LayoutInflater.from(getContext()).inflate(R.layout.list_item_track, parent, false);
         }
@@ -100,18 +108,14 @@ class TracksAdapter extends ArrayAdapter<Track> {
         ImageView trackImageView = (ImageView) convertView.findViewById(R.id.imageView);
 
         try {
-            Log.v("track.name", track.name);
-            String artistName = track.artists.get(0).name;
-            Log.v("artistName", artistName);
-
-            trackTextView.setText(track.name);
-            artistTextView.setText(artistName);
+            trackTextView.setText(track.getName());
+            artistTextView.setText(track.getArtistName());
         } catch (Exception e) {
             Log.e("setText", e.toString());
         }
         try {
-            if (track.album.images.size() > 0) {
-                Picasso.with(getContext()).load(track.album.images.get(0).url).into(trackImageView);
+            if (!track.getImageUrl().trim().isEmpty()) {
+                Picasso.with(getContext()).load(track.getImageUrl()).into(trackImageView);
             }
         } catch (Exception e) {
             Log.e("getView", e.toString());
@@ -125,6 +129,7 @@ class FetchTopTracksTask extends AsyncTask {
     private Context mContext;
     private View mView;
     private String mArtistID;
+    private TaskCompletedListener mListener;
 
     public FetchTopTracksTask(Context context, View view) {
         mContext = context;
@@ -135,13 +140,23 @@ class FetchTopTracksTask extends AsyncTask {
         mArtistID = activity.getIntent().getStringExtra("artistID");
     }
 
+    public FetchTopTracksTask(TaskCompletedListener listener, String artistID) {
+        mListener = listener;
+        mArtistID = artistID;
+    }
+
     @Override
     protected Object doInBackground(Object[] params) {
 
         SpotifyApi api = new SpotifyApi();
         SpotifyService spotify = api.getService();
 
+
+
         try {
+
+//            Thread.sleep(3000);
+
             HashMap map = new HashMap();
             map.put("country", "us");
             Tracks results = spotify.getArtistTopTrack(mArtistID, map);
@@ -155,20 +170,23 @@ class FetchTopTracksTask extends AsyncTask {
 
     @Override
     protected void onPostExecute(final Object o) {
-        ((Activity) mContext).runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
+        final List<Track> list = (List<Track>) o;
+        if (list == null) return;
 
-                final List<Track> list = (List<Track>) o;
+        // Call onTaskCompleted() in MainActivityFragment...
+        if (mListener != null) {
+            mListener.onTaskCompleted(o);
+            return;
+        }
 
-                if (list == null) return;
-
-                TracksAdapter adapter = new TracksAdapter(mContext, list);
-
-                ListView listView = (ListView) mView.findViewById(R.id.listView);
-                listView.setAdapter(adapter);
-            }
-        });
+//        ((Activity) mContext).runOnUiThread(new Runnable() {
+//            @Override
+//            public void run() {
+//                TracksAdapter adapter = new TracksAdapter(mContext, list);
+//                ListView listView = (ListView) mView.findViewById(R.id.listView);
+//                listView.setAdapter(adapter);
+//            }
+//        });
     }
 
 }
