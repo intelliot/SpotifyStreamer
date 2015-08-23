@@ -16,14 +16,9 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.EditText;
-import android.widget.ImageView;
 import android.widget.ListView;
-import android.widget.TextView;
 import android.widget.Toast;
-
-import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,21 +32,15 @@ import kaaes.spotify.webapi.android.models.Track;
 
 
 public class MainActivityFragment extends Fragment implements TaskCompletedListener {
-
-    @Override
-    public void onActivityCreated(Bundle savedInstanceState) {
-        super.onActivityCreated(savedInstanceState);
-
-//        getLoaderManager().initLoader(0, null, this);
-    }
-
     List<ArtistParcelable> mArtists;
     View mRootView;
-//    Parcelable mListViewState;
 
     public void setArtistParcelableList(List<ArtistParcelable> artists) {
         mArtists = artists;
-        if (artists == null) return;
+        if (artists == null || artists.size() == 0) {
+            artists = new ArrayList<>();
+            artists.add(new ArtistParcelable("No artists found.", null, null));
+        }
         ArtistsAdapter adapter = new ArtistsAdapter(getActivity(), artists);
         ListView listView = (ListView) mRootView.findViewById(R.id.listView);
         listView.setAdapter(adapter);
@@ -103,7 +92,7 @@ public class MainActivityFragment extends Fragment implements TaskCompletedListe
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-//        super.onCreateView(inflater, container, savedInstanceState);
+        // (Should not call super here)
 
         mRootView = inflater.inflate(R.layout.fragment_main, container, false);
         EditText editText = (EditText) mRootView.findViewById(R.id.editText);
@@ -126,6 +115,12 @@ public class MainActivityFragment extends Fragment implements TaskCompletedListe
                 // User clicked on an artist...
                 ArtistParcelable artist = (ArtistParcelable) parent.getAdapter().getItem(position);
 
+                // The "No artists found." row doesn't have an id.
+                if (artist.getId() == null) {
+                    Toast.makeText(getActivity(), "Try a different search!", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
                 // Check to see if there are any Top Tracks for this artist.
                 // We do this here because if there are no tracks,
                 // we will show a Toast instead of starting a TopTracksActivity.
@@ -144,6 +139,8 @@ public class MainActivityFragment extends Fragment implements TaskCompletedListe
     public void onTaskCompleted(Object o) {
         // Retrieved Top Tracks...
         final List<Track> list = (List<Track>) o;
+
+        // We already checked for null in FetchTopTracksTask, but it won't hurt to make sure.
         if (list == null || list.size() == 0) {
             Toast.makeText(getActivity(), "Artist has no top tracks", Toast.LENGTH_LONG).show();
             return;
@@ -179,31 +176,6 @@ public class MainActivityFragment extends Fragment implements TaskCompletedListe
         outState.putParcelable("listViewState", listView.onSaveInstanceState());
 
         super.onSaveInstanceState(outState);
-    }
-}
-
-class ArtistsAdapter extends ArrayAdapter<ArtistParcelable> {
-    public ArtistsAdapter(Context context, List<ArtistParcelable> artists) {
-        super(context, 0, artists);
-    }
-
-    @Override
-    public View getView(int position, View convertView, ViewGroup parent) {
-        ArtistParcelable artist = getItem(position);
-        if (convertView == null) {
-            convertView = LayoutInflater.from(getContext()).inflate(R.layout.list_item_artist, parent, false);
-        }
-        TextView artistTextView = (TextView) convertView.findViewById(R.id.list_item_artist_textview);
-        ImageView artistImageView = (ImageView) convertView.findViewById(R.id.imageView);
-        artistTextView.setText(artist.getName());
-        try {
-            if (artist.getImageUrl() != null && !artist.getImageUrl().trim().isEmpty()) {
-                Picasso.with(getContext()).load(artist.getImageUrl()).into(artistImageView);
-            }
-        } catch (Exception e) {
-            Log.e("getView", e.toString());
-        }
-        return convertView;
     }
 }
 
@@ -258,21 +230,10 @@ class FetchArtistsTask extends AsyncTask {
         ((Activity) mContext).runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                // If no artists are found, we will let `setArtistParcelableList()` show
+                // a row that indicates this. This is a nicer UI than showing a Toast.
                 mFragment.setArtistParcelableList((ArrayList<ArtistParcelable>) o);
             }
         });
     }
-
-//    @Override
-//    protected void onPostExecute(final ArrayList<ArtistParcelable> artists) {
-//        ((Activity) mContext).runOnUiThread(new Runnable() {
-//            @Override
-//            public void run() {
-//                if (artists == null) return;
-//                ArtistsAdapter adapter = new ArtistsAdapter(mContext, artists);
-//                ListView listView = (ListView) mView.findViewById(R.id.listView);
-//                listView.setAdapter(adapter);
-//            }
-//        });
-//    }
 }

@@ -1,6 +1,5 @@
 package com.tinyterabyte.spotifystreamer;
 
-import android.app.Activity;
 import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -52,44 +51,7 @@ public class TopTracksFragment extends Fragment {
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
     }
-
-//    @Override
-//    public void onCreate(Bundle savedInstanceState) {
-//        super.onCreate(savedInstanceState);
-//    }
 }
-
-
-
-//        getFragmentManager().putFragment(savedInstanceState, "TopTracksFragment", this);
-
-
-//        Intent intent = getIntent();
-//        String artistID = intent.getStringExtra("artistID");
-//        getFragmentManager().getFragment(savedInstanceState, )
-
-//        String[] array = {
-//                "Loading..."
-//        };
-//        List<String> list = new ArrayList<String>(Arrays.asList(array));
-//
-//        ArrayAdapter<String> adapter = new ArrayAdapter<String>(getActivity(),
-//                R.layout.list_item_track,
-//                R.id.list_item_track_artist_textview,
-//                list);
-//
-//        ListView listView = (ListView) rootView.findViewById(R.id.listView);
-//        listView.setAdapter(adapter);
-
-//        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-//            @Override
-//            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-////                Intent intent = new Intent(MainActivity.this, TopTracksActivity.this);
-////                startActivity(intent);
-//            }
-//        });
-
-
 
 class TracksAdapter extends ArrayAdapter<TrackParcelable> {
     public TracksAdapter(Context context, ArrayList<TrackParcelable> tracks) {
@@ -126,20 +88,10 @@ class TracksAdapter extends ArrayAdapter<TrackParcelable> {
 }
 
 class FetchTopTracksTask extends AsyncTask {
-    private Context mContext;
-    private View mView;
-    private String mArtistID;
     private TaskCompletedListener mListener;
+    private String mArtistID;
 
-    public FetchTopTracksTask(Context context, View view) {
-        mContext = context;
-        mView = view;
-
-        Activity activity = (Activity) context;
-
-        mArtistID = activity.getIntent().getStringExtra("artistID");
-    }
-
+    // listener and artistID are both required.
     public FetchTopTracksTask(TaskCompletedListener listener, String artistID) {
         mListener = listener;
         mArtistID = artistID;
@@ -147,16 +99,10 @@ class FetchTopTracksTask extends AsyncTask {
 
     @Override
     protected Object doInBackground(Object[] params) {
-
         SpotifyApi api = new SpotifyApi();
         SpotifyService spotify = api.getService();
 
-
-
         try {
-
-//            Thread.sleep(3000);
-
             HashMap map = new HashMap();
             map.put("country", "us");
             Tracks results = spotify.getArtistTopTrack(mArtistID, map);
@@ -171,22 +117,14 @@ class FetchTopTracksTask extends AsyncTask {
     @Override
     protected void onPostExecute(final Object o) {
         final List<Track> list = (List<Track>) o;
+
+        // If artist has no Top Tracks, list will have size() == 0.
+        // list should not be null - but just return if it is.
         if (list == null) return;
 
-        // Call onTaskCompleted() in MainActivityFragment...
+        // Call onTaskCompleted() in MainActivityFragment.
         if (mListener != null) {
             mListener.onTaskCompleted(o);
-            return;
         }
-
-//        ((Activity) mContext).runOnUiThread(new Runnable() {
-//            @Override
-//            public void run() {
-//                TracksAdapter adapter = new TracksAdapter(mContext, list);
-//                ListView listView = (ListView) mView.findViewById(R.id.listView);
-//                listView.setAdapter(adapter);
-//            }
-//        });
     }
-
 }
